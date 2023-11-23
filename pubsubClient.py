@@ -4,6 +4,10 @@ import socket
 import threading
 import json
 import time
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 HOST = "localhost"
 PORT = 8000  # default
@@ -14,25 +18,50 @@ class Listener(threading.Thread):
     def __init__(self, channel_name, thread_name):
         threading.Thread.__init__(self)
         self.channel_name = channel_name
-        self.broker = Server('http://localhost:1006')
+        self.broker = Server('http://localhost:5000')
         self.thread_name = thread_name
         self.message_queue = self.broker.subscribe(thread_name, channel_name)
         self.daemon = True  # Ensure thread exits when main program does
+        self._stop_event = threading.Event()
 
     def run(self):
         print(f"{self.thread_name} Run start, listening to messages on channel {self.channel_name}")
-        is_running = True
-        while is_running:
+        global data
+        while not self._stop_event.is_set():
             message = self.broker.listen(self.thread_name, self.channel_name)
             if message:
                 print(f"Received message: {message}")
+                data = message
                 # Process the message here
             else:
                 # No message in queue, sleep for a short time to avoid busy waiting
-                time.sleep(0.1)
+                time.sleep(0.5)
+                self._stop_event.wait(timeout=0.5)
+
+    def stop(self):
+        self._stop_event.set()
 
     def unsubscribe(self):
-        self.broker.unsubscribe__(self.thread_name, self.channel_name)
+        self.broker.unsubscribe(self.thread_name, self.channel_name)
+
+
+def send_success_response(client):
+    client.sendall(str.encode("HTTP/1.1 200 OK\n", 'iso-8859-1'))
+    client.sendall(str.encode('Content-Type: application/json\n', 'iso-8859-1'))
+    client.sendall(str.encode('Access-Control-Allow-Origin: *\n', 'iso-8859-1'))
+    client.sendall(b'0\r\n\r\n')
+
+
+def send_data(client, listener_name):
+    global data
+    json_string = json.dumps(data.get(listener_name, []))
+    client.sendall(str.encode("HTTP/1.1 200 OK\n", 'iso-8859-1'))
+    client.sendall(str.encode('Content-Type: application/json\n', 'iso-8859-1'))
+    client.sendall(str.encode('Access-Control-Allow-Origin: *\n', 'iso-8859-1'))
+    client.sendall(str.encode('\r\n'))
+    client.sendall(json_string.encode())
+    client.sendall(b'0\r\n\r\n')
+
 
 class ThreadedServer(object):
     def __init__(self):
@@ -51,7 +80,6 @@ class ThreadedServer(object):
     def handle_client(self, client, address):
         size = 1024
         with client:
-            client.settimeout(5)
             while True:
                 try:
                     global listener_track
@@ -68,30 +96,27 @@ class ThreadedServer(object):
                             listener_track[listener_name] = {}
                         listener_track[listener_name][channel_name] = listener
                         listener.start()
+                        send_success_response(client)
                     elif "/getData" in REST[1]:
                         query = REST[1].split('?')[1]
                         params = dict(x.split('=') for x in query.split('&'))
                         listener_name = params['listener']
-                        self.send_data(client, listener_name)
+                        send_data(client, listener_name)
                     elif "/unsubscribe" in REST[1]:
                         query = REST[1].split('?')[1]
                         params = dict(x.split('=') for x in query.split('&'))
                         listener_name = params['listener']
                         channel_name = params['channel']
                         if listener_name in listener_track and channel_name in listener_track[listener_name]:
+                            listener_track[listener_name][channel_name].stop()
+                            listener_track[listener_name][channel_name].join()
                             listener_track[listener_name][channel_name].unsubscribe()
+                        send_success_response(client)
                 except Exception as e:
+                    logger.error("Caught an Exception", e)
                     break
             client.close()
 
-    def send_data(self, client, listener_name):
-        global data
-        json_string = json.dumps(data.get(listener_name, []))
-        client.sendall(str.encode("HTTP/1.1 200 OK\n", 'iso-8859-1'))
-        client.sendall(str.encode('Content-Type: application/json\n', 'iso-8859-1'))
-        client.sendall(str.encode('Access-Control-Allow-Origin: *\n', 'iso-8859-1'))
-        client.sendall(str.encode('\r\n'))
-        client.sendall(json_string.encode())
 
 def main():
     ThreadedServer().listen()

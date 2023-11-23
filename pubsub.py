@@ -27,11 +27,9 @@ class PubSubBase():
 
         return message_queue
 
-    def unsubscribe(self, listener, channel, message_queue):
+    def unsubscribe(self, listener, channel):
         if not channel:
             raise ValueError('channel : None value not allowed')
-        if not message_queue:
-            raise ValueError('message_queue : None value not allowed')
         if channel in self.channels:
             if listener in self.channels[channel]:
                 del self.channels[channel][listener]
@@ -82,13 +80,11 @@ class PubSub(PubSubBase):
     def publish(self, channel, message):
         self.publish_(channel, message, False, priority=100)
 
-    def getMessageQueue(self, listener, channel_name):
-        return self.getMessageQueue_(listener, channel_name)
+    def get_message_queue(self, listener, channel_name):
+        return self.get_message(listener, channel_name)
 
     def unsubscribe(self, listener, channel_name):
-        message_queue = self.getMessageQueue(listener, channel_name)
-        if message_queue:
-            super().unsubscribe(listener, channel_name, message_queue)
+        super().unsubscribe(listener, channel_name)
 
     def listen(self, listener, channel_name):
         return self.get_message(listener, channel_name)
@@ -111,7 +107,7 @@ def main():
         communicator.unsubscribe(listener, channel_name)
 
     # Set up the JSON-RPC server
-    server = SimpleJSONRPCServer(('localhost', 1006))
+    server = SimpleJSONRPCServer(('localhost', 5000))
     server.register_function(rpc_publish, 'publish')
     server.register_function(rpc_subscribe, 'subscribe')
     server.register_function(rpc_listen, 'listen')

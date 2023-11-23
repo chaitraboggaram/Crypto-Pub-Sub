@@ -12,7 +12,7 @@ class Sender(threading.Thread):
         self.thread_name = thread_name
         self.channel_name = channel_name
         self.full_thread_name = full_thread_name
-        self.broker = Server('http://localhost:1006')
+        self.broker = Server('http://localhost:5000')
         self.nb_of_messages_to_send = nb_of_messages_to_send
 
     def run(self):

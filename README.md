@@ -21,6 +21,11 @@
     python .\pubsubClient.py
     ```
 
+**Requirements:**
+```bash
+pip install -r requirements.txt
+```
+
 **Web Interface:**
 - Open `index.html` in any browser locally. It's a static page and doesn't need to be served from a server.
 
