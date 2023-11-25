@@ -80,9 +80,6 @@ class PubSub(PubSubBase):
     def publish(self, channel, message):
         self.publish_(channel, message, False, priority=100)
 
-    def get_message_queue(self, listener, channel_name):
-        return self.get_message(listener, channel_name)
-
     def unsubscribe(self, listener, channel_name):
         super().unsubscribe(listener, channel_name)
 

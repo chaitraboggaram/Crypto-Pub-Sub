@@ -7,193 +7,214 @@
     <title>Crypto Updates</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <style>
-        html, body {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            background: #f7f7f7;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+    <link rel="stylesheet" type="text/css" href="index.css">
 
-        .button {
-            background-image: linear-gradient(to right, #6dd5ed, #2193b0);
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 14px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 20px;
-            box-shadow: 0 4px 14px 0 rgba(109, 213, 237, 0.39);
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-
-        .button:hover {
-            background-image: linear-gradient(to right, #2193b0, #6dd5ed);
-            box-shadow: 0 5px 15px 0 rgba(109, 213, 237, 0.45);
-        }
-
-        .allCrypto {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            max-width: 900px;
-            margin: 50px auto;
-        }
-
-        .singleCrypto {
-            padding: 20px;
-            border: 1px solid #ddd;
-            text-align: center;
-            margin: 5px;
-            min-width: 220px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-
-        .singleCrypto:hover {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
-
-        .crypto-details {
-            margin-top: 20px;
-        }
-
-        .message {
-            background: #fff;
-            border-left: 3px solid #2193b0;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .message h4 {
-            margin: 0;
-            font-size: 16px;
-            color: #333;
-        }
-
-        .message p {
-            margin: 0;
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
 </head>
 <body>
-    <div class="allCrypto">
-        <!-- Bitcoin Container -->
-        <div class="singleCrypto">
-            <button id="bitcoinButtonSub" class="button">Subscribe Bitcoin</button>
-            <button id="bitcoinButtonUnSub" class="button" style="display:none;">UnSubscribe Bitcoin</button>
-            <div id="bitcoinUpdates" class="crypto-details">
-                <!-- Bitcoin updates will be displayed here -->
-            </div>
-        </div>
-        <!-- Ethereum Container -->
-        <div class="singleCrypto">
-            <button id="ethButtonSub" class="button">Subscribe Ethereum</button>
-            <button id="ethButtonUnSub" class="button" style="display:none;">UnSubscribe Ethereum</button>
-            <div id="ethUpdates" class="crypto-details">
-                <!-- Ethereum updates will be displayed here -->
-            </div>
+<div class="allCrypto">
+    <!-- Bitcoin Container -->
+    <div class="singleCrypto">
+        <button id="bitcoinButtonSub" class="button">Subscribe Bitcoin</button>
+        <button id="bitcoinButtonUnSub" class="button" style="display:none;">UnSubscribe Bitcoin</button>
+        <div id="bitcoinUpdates" class="crypto-details">
+            <!-- Bitcoin updates will be displayed here -->
         </div>
     </div>
+    <!-- Ethereum Container -->
+    <div class="singleCrypto">
+        <button id="ethButtonSub" class="button">Subscribe Ethereum</button>
+        <button id="ethButtonUnSub" class="button" style="display:none;">UnSubscribe Ethereum</button>
+        <div id="ethUpdates" class="crypto-details">
+            <!-- Ethereum updates will be displayed here -->
+        </div>
+    </div>
+    <!-- ripple Container -->
+    <div class="singleCrypto">
+        <button id="rippleButtonSub" class="button">Subscribe Ripple</button>
+        <button id="rippleButtonUnSub" class="button" style="display:none;">UnSubscribe Ripple</button>
+        <div id="rippleUpdates" class="crypto-details">
+            <!-- ripple updates will be displayed here -->
+        </div>
+    </div>
+    <!-- cardano Container -->
+    <div class="singleCrypto">
+        <button id="cardanoButtonSub" class="button">Subscribe Cardano</button>
+        <button id="cardanoButtonUnSub" class="button" style="display:none;">UnSubscribe Cardano</button>
+        <div id="cardanoUpdates" class="crypto-details">
+            <!-- cardano updates will be displayed here -->
+        </div>
+    </div>
+    <!-- dogecoin Container -->
+    <div class="singleCrypto">
+        <button id="dogecoinButtonSub" class="button">Subscribe Dogecoin</button>
+        <button id="dogecoinButtonUnSub" class="button" style="display:none;">UnSubscribe Dogecoin</button>
+        <div id="dogecoinUpdates" class="crypto-details">
+            <!-- dogecoin updates will be displayed here -->
+        </div>
+    </div>
+</div>
 
-    <script>
-        let bitcoinBtnSub = document.getElementById("bitcoinButtonSub");
-        let bitcoinBtnUnSub = document.getElementById("bitcoinButtonUnSub");
-        let ethBtnSub = document.getElementById("ethButtonSub");
-        let ethBtnUnSub = document.getElementById("ethButtonUnSub");
-        let bitcoinInterval;
-        let ethInterval;
+<script>
+    let bitcoinBtnSub = document.getElementById("bitcoinButtonSub");
+    let bitcoinBtnUnSub = document.getElementById("bitcoinButtonUnSub");
+    let bitcoinUpdatesId = "bitcoinUpdates"
+    let bitcoinInterval;
+    let ethBtnSub = document.getElementById("ethButtonSub");
+    let ethBtnUnSub = document.getElementById("ethButtonUnSub");
+    let ethUpdatesId = "ethUpdates"
+    let ethInterval;
+    let rippleBtnSub = document.getElementById("rippleButtonSub");
+    let rippleBtnUnSub = document.getElementById("rippleButtonUnSub");
+    let rippleUpdatesId = "rippleUpdates"
+    let rippleInterval;
+    let cardanoBtnSub = document.getElementById("cardanoButtonSub");
+    let cardanoBtnUnSub = document.getElementById("cardanoButtonUnSub");
+    let cardanoUpdatesId = "cardanoUpdates"
+    let cardanoInterval;
+    let dogecoinBtnSub = document.getElementById("dogecoinButtonSub");
+    let dogecoinBtnUnSub = document.getElementById("dogecoinButtonUnSub");
+    let dogecoinUpdatesId = "dogecoinUpdates"
+    let dogecoinInterval;
+    let listener_id = crypto.randomUUID();
 
-        bitcoinBtnSub.onclick = function () {
-            bitcoinBtnSub.style.display = 'none';
-            bitcoinBtnUnSub.style.display = 'inline-block';
-            subscribe("bitcoin");
-        };
+    bitcoinBtnSub.onclick = function () {
+        bitcoinBtnSub.style.display = 'none';
+        bitcoinBtnUnSub.style.display = 'inline-block';
+        subscribe("bitcoin");
+    };
 
-        ethBtnSub.onclick = function () {
-            ethBtnSub.style.display = 'none';
-            ethBtnUnSub.style.display = 'inline-block';
-            subscribe("ethereum");
-        };
+    bitcoinBtnUnSub.onclick = function () {
+        bitcoinBtnUnSub.style.display = 'none';
+        bitcoinBtnSub.style.display = 'inline-block';
+        unsubscribe("bitcoin");
+    };
 
-        bitcoinBtnUnSub.onclick = function () {
-            bitcoinBtnUnSub.style.display = 'none';
-            bitcoinBtnSub.style.display = 'inline-block';
-            unsubscribe("bitcoin");
-        };
+    ethBtnSub.onclick = function () {
+        ethBtnSub.style.display = 'none';
+        ethBtnUnSub.style.display = 'inline-block';
+        subscribe("ethereum");
+    };
 
-        ethBtnUnSub.onclick = function () {
-            ethBtnUnSub.style.display = 'none';
-            ethBtnSub.style.display = 'inline-block';
-            unsubscribe("ethereum");
-        };
+    ethBtnUnSub.onclick = function () {
+        ethBtnUnSub.style.display = 'none';
+        ethBtnSub.style.display = 'inline-block';
+        unsubscribe("ethereum");
+    };
 
-        function unsubscribe(crypto) {
-            axios.get(`http://localhost:8000/unsubscribe`, {
-                params: {
-                    listener: 'user',
-                    channel: crypto
-                }
-            }).then(() => {
-                if (crypto === "bitcoin") {
-                    clearInterval(bitcoinInterval);
-                } else if (crypto === "ethereum") {
-                    clearInterval(ethInterval);
-                }
-            }).catch(error => {
-                console.error(`Error unsubscribing from ${crypto}:`, error);
-            });
-        }
+    rippleBtnSub.onclick = function () {
+        rippleBtnSub.style.display = 'none';
+        rippleBtnUnSub.style.display = 'inline-block';
+        subscribe("xrp");
+    };
 
-        function subscribe(crypto) {
-            axios.get(`http://localhost:8000/subscribe`, {
-                params: {
-                    listener: 'user',
-                    channel: crypto
-                }
-            }).then(() => {
-                if (crypto === "bitcoin") {
-                    bitcoinInterval = setInterval(() => callAPICrypto('bitcoin', 'bitcoinUpdates'), 2000);
-                } else if (crypto === "ethereum") {
-                    ethInterval = setInterval(() => {console.log("within interval"); callAPICrypto('ethereum', 'ethUpdates')}, 2000);
-                }
-            }).catch(error => {
-                console.error(`Error subscribing to ${crypto}:`, error);
-            });
-        }
+    rippleBtnUnSub.onclick = function () {
+        rippleBtnUnSub.style.display = 'none';
+        rippleBtnSub.style.display = 'inline-block';
+        unsubscribe("xrp");
+    };
 
-        function callAPICrypto(crypto, elementId) {
-            axios.get(`http://localhost:8000/getData`, {
-                params: {
-                    listener: 'user',
-                    channel: crypto
-                }
-            }).then(response => {
-                const updatesElement = document.getElementById(elementId);
-                let updatesHTML = '';
-                response.data.forEach(update => {
-                    updatesHTML += `<div class="message">
-                                        <h4><b>${update.currency.toUpperCase()}</b></h4>
-                                        <p>Price: $${update.price.toFixed(2)}</p>
+    cardanoBtnSub.onclick = function () {
+        cardanoBtnSub.style.display = 'none';
+        cardanoBtnUnSub.style.display = 'inline-block';
+        subscribe("cardano");
+    };
+
+    cardanoBtnUnSub.onclick = function () {
+        cardanoBtnUnSub.style.display = 'none';
+        cardanoBtnSub.style.display = 'inline-block';
+        unsubscribe("cardano");
+    };
+
+    dogecoinBtnSub.onclick = function () {
+        dogecoinBtnSub.style.display = 'none';
+        dogecoinBtnUnSub.style.display = 'inline-block';
+        subscribe("dogecoin");
+    };
+
+    dogecoinBtnUnSub.onclick = function () {
+        dogecoinBtnUnSub.style.display = 'none';
+        dogecoinBtnSub.style.display = 'inline-block';
+        unsubscribe("dogecoin");
+    };
+
+    function unsubscribe(crypto) {
+        axios.get(`http://localhost:8000/unsubscribe`, {
+            params: {
+                listener: listener_id,
+                channel: crypto
+            }
+        }).then(() => {
+            if (crypto === "bitcoin") {
+                const updatesElement = document.getElementById(bitcoinUpdatesId);
+                updatesElement.innerHTML = '';
+                clearInterval(bitcoinInterval);
+            } else if (crypto === "ethereum") {
+                const updatesElement = document.getElementById(ethUpdatesId);
+                updatesElement.innerHTML = '';
+                clearInterval(ethInterval);
+            } else if (crypto === "xrp") {
+                const updatesElement = document.getElementById(rippleUpdatesId);
+                updatesElement.innerHTML = '';
+                clearInterval(rippleInterval);
+            } else if (crypto === "cardano") {
+                const updatesElement = document.getElementById(cardanoUpdatesId);
+                updatesElement.innerHTML = '';
+                clearInterval(cardanoInterval);
+            } else if (crypto === "dogecoin") {
+                const updatesElement = document.getElementById(dogecoinUpdatesId);
+                updatesElement.innerHTML = '';
+                clearInterval(dogecoinInterval);
+            }
+        }).catch(error => {
+            console.error(`Error unsubscribing from ${crypto}:`, error);
+        });
+    }
+
+    function subscribe(crypto) {
+        axios.get(`http://localhost:8000/subscribe`, {
+            params: {
+                listener: listener_id,
+                channel: crypto
+            }
+        }).then(() => {
+            if (crypto === "bitcoin") {
+                bitcoinInterval = setInterval(() => callAPICrypto(crypto, bitcoinUpdatesId), 2000);
+            } else if (crypto === "ethereum") {
+                ethInterval = setInterval(() => callAPICrypto(crypto, ethUpdatesId), 2000);
+            } else if (crypto === "xrp") {
+                rippleInterval = setInterval(() => callAPICrypto(crypto, rippleUpdatesId), 2000);
+            } else if (crypto === "cardano") {
+                cardanoInterval = setInterval(() => callAPICrypto(crypto, cardanoUpdatesId), 2000);
+            } else if (crypto === "dogecoin") {
+                dogecoinInterval = setInterval(() => callAPICrypto(crypto, dogecoinUpdatesId), 2000);
+            }
+        }).catch(error => {
+            console.error(`Error subscribing to ${crypto}:`, error);
+        });
+    }
+
+    function callAPICrypto(crypto, elementId) {
+        axios.get(`http://localhost:8000/getData`, {
+            params: {
+                listener: listener_id,
+                channel: crypto
+            }
+        }).then(response => {
+            const updatesElement = document.getElementById(elementId);
+            let updatesHTML = '';
+            response.data.forEach(update => {
+                updatesHTML += `<div class="message">
+                                        <h4><b>${update.data.currency.toUpperCase()}</b></h4>
+                                        <p><b>Price:</b> $${update.data.price}</p>
+                                        <p><b>Supply:</b> ${update.data.supply}</p>
+                                        <p><b>MaxSupply:</b> ${update.data.maxSupply}</p>
                                     </div>`;
-                });
-                updatesElement.innerHTML = updatesHTML;
-            }).catch(error => {
-                console.error(`Error fetching data for ${crypto}:`, error);
             });
-        }
-    </script>
+            updatesElement.innerHTML = updatesHTML;
+        }).catch(error => {
+            console.error(`Error fetching data for ${crypto}:`, error);
+        });
+    }
+</script>
 </body>
 </html>

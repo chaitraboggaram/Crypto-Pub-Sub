@@ -1,0 +1,79 @@
+html, body {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    background: rgba(247, 247, 247, 0.76);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.button {
+    background-image: linear-gradient(to right, #50c3da, #e96ded);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 20px;
+    box-shadow: 0 4px 14px 0 rgba(109, 213, 237, 0.39);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.button:hover {
+    background-image: linear-gradient(to right, #f1b468, #a95f17);
+    box-shadow: 0 5px 15px 0 rgba(109, 213, 237, 0.45);
+}
+
+.allCrypto {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    /*max-width: 900px;*/
+    margin: 50px auto;
+    width: 100%;
+}
+
+.singleCrypto {
+    padding: 20px;
+    border: 1px solid #ddd;
+    text-align: center;
+    margin: 5px;
+    min-width: 220px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.singleCrypto:hover {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.crypto-details {
+    margin-top: 20px;
+}
+
+.message {
+    background: #fff;
+    border-left: 3px solid #2193b0;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.message h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.message p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
