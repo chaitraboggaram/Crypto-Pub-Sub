@@ -1,10 +1,19 @@
-import warnings
+import logging
 from threading import Lock, Thread
 from queue import Queue, PriorityQueue, Empty
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+import argparse
+from kafka import KafkaAdminClient, KafkaConsumer, KafkaProducer, TopicPartition, OffsetAndMetadata
+from kafka.admin import NewTopic
+import json
 
-class PubSubBase():
-    def __init__(self, max_queue_in_a_channel=100, max_id_4_a_channel=2**31):
+logger = logging.getLogger(__name__)
+
+
+class PubSubBase:
+    def __init__(self, use_kafka, max_queue_in_a_channel=100, max_id_4_a_channel=2 ** 31):
+        self.use_kafka = use_kafka
+        self.kafka_producer_client = None
         self.max_queue_in_a_channel = max_queue_in_a_channel
         self.max_id_4_a_channel = max_id_4_a_channel
 
@@ -22,7 +31,27 @@ class PubSubBase():
             if channel not in self.channels:
                 self.channels[channel] = {}
 
-        message_queue = PriorityQueue() if is_priority_queue else Queue()
+        if self.use_kafka:
+            try:
+                admin = KafkaAdminClient(bootstrap_servers='localhost:9092')
+                topic_metadata = admin.list_topics()
+                if channel not in topic_metadata:
+                    channel_topic = NewTopic(name=channel,
+                                             num_partitions=1,
+                                             replication_factor=1)
+                    admin.create_topics([channel_topic])
+                message_queue = channel
+                admin.close()
+                self.kafka_producer_client = KafkaProducer(
+                    bootstrap_servers='localhost:9092',
+                    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                    acks=0
+                )
+            except Exception as e:
+                logger.error("Kafka init error", e)
+                raise
+        else:
+            message_queue = PriorityQueue() if is_priority_queue else Queue()
         self.channels[channel][listener] = message_queue
 
         return message_queue
@@ -53,27 +82,62 @@ class PubSubBase():
 
         for listener in self.channels[channel]:
             channel_queue = self.channels[channel][listener]
-            if channel_queue.qsize() >= self.max_queue_in_a_channel:
-                warnings.warn(
-                    f"Queue overflow for channel {channel}, "
-                    f"> {self.max_queue_in_a_channel} "
-                    "(self.max_queue_in_a_channel parameter)")
+            if self.use_kafka:
+                try:
+                    self.kafka_producer_client.send(
+                        channel_queue,
+                        value={'channel': channel, 'data': message, 'id': _id}
+                    )
+                except Exception as e:
+                    self.kafka_producer_client.close()
+                    logger.error("Kafka producer error: ", e)
+                    raise
             else:
-                if is_priority_queue:
-                    channel_queue.put((priority, {'data': message, 'id': _id}), block=False)
+                if channel_queue.qsize() >= self.max_queue_in_a_channel:
+                    logger.warning(
+                        f"Queue overflow for channel {channel}, "
+                        f"> {self.max_queue_in_a_channel} "
+                        "(self.max_queue_in_a_channel parameter)")
                 else:
-                    channel_queue.put({'channel': channel, 'data': message, 'id': _id}, block=False)
+                    if is_priority_queue:
+                        channel_queue.put((priority, {'data': message, 'id': _id}), block=False)
+                    else:
+                        channel_queue.put({'channel': channel, 'data': message, 'id': _id}, block=False)
 
     def get_message(self, listener, channel):
         message_queue = self.channels.get(channel, {}).get(listener, None)
         if message_queue is None:
             return None
         try:
-            return message_queue.get_nowait()
-        except Empty:
+            if self.use_kafka:
+                consumer = KafkaConsumer(
+                    message_queue,
+                    bootstrap_servers='localhost:9092',
+                    auto_offset_reset='earliest',
+                    group_id=listener,
+                    enable_auto_commit=False,
+                    value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+                )
+                topic_partition = TopicPartition(channel, 0)
+                messages = consumer.poll(timeout_ms=100)
+                if not messages or messages == {}:
+                    return None
+                else:
+                    print(f"Total Messages in Kafka Queue for {topic_partition}: {len(messages[topic_partition])}")
+                    data = messages[topic_partition][-1].value
+                    consumer.commit(offsets={topic_partition: OffsetAndMetadata(messages[topic_partition][-1].offset + 1, None)})
+                    return data
+            else:
+                return message_queue.get_nowait()
+        except Exception as e:
+            logger.error("Consumer error", e)
             return None
 
+
 class PubSub(PubSubBase):
+    def __init__(self, use_kafka):
+        super().__init__(use_kafka)
+
     def subscribe(self, listener, channel):
         return self.subscribe_(listener, channel, False)
 
@@ -86,9 +150,18 @@ class PubSub(PubSubBase):
     def listen(self, listener, channel_name):
         return self.get_message(listener, channel_name)
 
+
 def main():
+    parser = argparse.ArgumentParser(description='Broker program for emitting crypto prices')
+    parser.add_argument('--useKafka', action='store_true', default=False, help='Flag to turn on Kafka message broker')
+
+    args = parser.parse_args()
+
+    # Access the flags
+    use_kafka = args.useKafka
+
     # Create an instance of the PubSub class
-    communicator = PubSub()
+    communicator = PubSub(use_kafka)
 
     # Define the functions to expose over JSON-RPC
     def rpc_publish(channel_name, message):
@@ -113,6 +186,7 @@ def main():
     # Start the server
     print("Broker started")
     server.serve_forever()
+
 
 if __name__ == '__main__':
     main()

@@ -1,16 +1,16 @@
-# Crypto News Notifier
+# Crypto Price Notifier
 
 **Application Components:**
 - **Broker**
 - **Client (Subscriber)**
 - **Server (Publisher)**
 
-**Requirements:**
+**Pre-Requisites:**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Installation:**
+**Run the required Services:**
 From directory of the project run the following: 
 
 1. Run the Broker:
@@ -44,3 +44,29 @@ From directory of the project run the following:
 **Web Notifications:**
 - On the `index.html` webpage, subscribe to bitcoin, ethereum, xrp, cardano and/or dogecoin (based on the POST request).
 - Observe the notifications coming through.
+
+**(Optional) Testing with Kafka**
+
+***Pre-Requisites***
+- Install Kafka: (Steps from: https://kafka.apache.org/quickstart#quickstart_download)
+- Starting Kafka services: (Steps from: https://kafka.apache.org/quickstart#quickstart_startserver)
+  - Start ZooKeeper: `bin/zookeeper-server-start.sh config/zookeeper.properties`
+  - Start Kafka: `bin/kafka-server-start.sh config/server.properties`
+
+***Run the required Services***
+1. Run the Broker to use Kafka as message broker:
+    ```bash
+    python pubsub.py --useKafka 
+    ```  
+
+2. Run the Server:
+    ```bash
+    python pubsubServer.py
+    ```
+
+3. Run the Client:
+    ```bash
+    python pubsubClient.py
+    ```
+
+_TIP: Install Kafka Jetbrains plugin to verify messages in queue within PyCharm: https://plugins.jetbrains.com/plugin/21704-kafka_

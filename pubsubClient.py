@@ -22,7 +22,6 @@ class Listener(threading.Thread):
         self.broker = Server('http://localhost:5000')
         self.thread_name = listener_name
         self.message_queue = self.broker.subscribe(listener_name, channel_name)
-        self.daemon = True  # Ensure thread exits when main program does
         self._stop_event = threading.Event()
 
     def run(self):
