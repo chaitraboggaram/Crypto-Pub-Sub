@@ -1,46 +1,46 @@
-import logging
-from threading import Lock, Thread
-from queue import Queue, PriorityQueue, Empty
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 import argparse
+import json
+import logging
+from queue import Queue, PriorityQueue
+from threading import Lock
+
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 from kafka import KafkaAdminClient, KafkaConsumer, KafkaProducer, TopicPartition, OffsetAndMetadata
 from kafka.admin import NewTopic
-import json
 
 logger = logging.getLogger(__name__)
 
-
+BROKER_PORT = 8010
 class PubSubBase:
-    def __init__(self, use_kafka, max_queue_in_a_channel=100, max_id_4_a_channel=2 ** 31):
-        self.use_kafka = use_kafka
-        self.kafka_producer_client = None
-        self.max_queue_in_a_channel = max_queue_in_a_channel
-        self.max_id_4_a_channel = max_id_4_a_channel
-
-        self.channels = {}
+    def __init__(self, use_kafka, max_queue_size, max_id_per_topic):
+        self.topics = {}
         self.count = {}
-
-        self.channels_lock = Lock()
+        self.topics_lock = Lock()
         self.count_lock = Lock()
 
-    def subscribe_(self, listener, channel, is_priority_queue):
-        if not channel:
-            raise ValueError('channel : None value not allowed')
+        self.use_kafka = use_kafka
+        self.kafka_producer_client = None
+        self.max_queue_size = max_queue_size
+        self.max_id_per_topic = max_id_per_topic
 
-        with self.channels_lock:
-            if channel not in self.channels:
-                self.channels[channel] = {}
+    def subscribe_(self, listener, topic, is_priority_queue):
+        if not topic:
+            raise ValueError('topic: cannot be None')
+
+        with self.topics_lock:
+            if topic not in self.topics:
+                self.topics[topic] = {}
 
         if self.use_kafka:
             try:
                 admin = KafkaAdminClient(bootstrap_servers='localhost:9092')
                 topic_metadata = admin.list_topics()
-                if channel not in topic_metadata:
-                    channel_topic = NewTopic(name=channel,
+                if topic not in topic_metadata:
+                    channel_topic = NewTopic(name=topic,
                                              num_partitions=1,
                                              replication_factor=1)
                     admin.create_topics([channel_topic])
-                message_queue = channel
+                message_queue = topic
                 admin.close()
                 self.kafka_producer_client = KafkaProducer(
                     bootstrap_servers='localhost:9092',
@@ -52,60 +52,60 @@ class PubSubBase:
                 raise
         else:
             message_queue = PriorityQueue() if is_priority_queue else Queue()
-        self.channels[channel][listener] = message_queue
+        self.topics[topic][listener] = message_queue
 
         return message_queue
 
-    def unsubscribe(self, listener, channel):
-        if not channel:
-            raise ValueError('channel : None value not allowed')
-        if channel in self.channels:
-            if listener in self.channels[channel]:
-                del self.channels[channel][listener]
+    def unsubscribe(self, listener, topic):
+        if not topic:
+            raise ValueError('topic: cannot be None')
+        if topic in self.topics:
+            if listener in self.topics[topic]:
+                del self.topics[topic][listener]
 
-    def publish_(self, channel, message, is_priority_queue, priority):
-        if priority < 0:
-            raise ValueError('priority must be > 0')
-        if not channel:
-            raise ValueError('channel : None value not allowed')
+    def publish_(self, topic, message, is_priority_queue, priority):
         if not message:
-            raise ValueError('message : None value not allowed')
+            raise ValueError('message: cannot be None')
+        if not topic:
+            raise ValueError('topic: cannot be None')
+        if not priority >= 0:
+            raise ValueError('priority: must be > 0')
 
-        with self.channels_lock:
-            if channel not in self.channels:
-                self.channels[channel] = {}
+        with self.topics_lock:
+            if topic not in self.topics:
+                self.topics[topic] = {}
 
         with self.count_lock:
-            self.count[channel] = (self.count.get(channel, 0) + 1) % self.max_id_4_a_channel
+            self.count[topic] = (self.count.get(topic, 0) + 1) % self.max_id_per_topic
 
-        _id = self.count[channel]
+        _id = self.count[topic]
 
-        for listener in self.channels[channel]:
-            channel_queue = self.channels[channel][listener]
+        for listener in self.topics[topic]:
+            topic_queue = self.topics[topic][listener]
             if self.use_kafka:
                 try:
                     self.kafka_producer_client.send(
-                        channel_queue,
-                        value={'channel': channel, 'data': message, 'id': _id}
+                        topic_queue,
+                        value={'topic': topic, 'data': message, 'id': _id}
                     )
                 except Exception as e:
                     self.kafka_producer_client.close()
                     logger.error("Kafka producer error: ", e)
                     raise
             else:
-                if channel_queue.qsize() >= self.max_queue_in_a_channel:
+                if topic_queue.qsize() >= self.max_queue_size:
                     logger.warning(
-                        f"Queue overflow for channel {channel}, "
-                        f"> {self.max_queue_in_a_channel} "
-                        "(self.max_queue_in_a_channel parameter)")
+                        f"Queue overflow for topic {topic}, "
+                        f"> {self.max_queue_size} "
+                        "(self.max_id_per_topic parameter)")
                 else:
                     if is_priority_queue:
-                        channel_queue.put((priority, {'data': message, 'id': _id}), block=False)
+                        topic_queue.put((priority, {'data': message, 'id': _id}), block=False)
                     else:
-                        channel_queue.put({'channel': channel, 'data': message, 'id': _id}, block=False)
+                        topic_queue.put({'topic': topic, 'data': message, 'id': _id}, block=False)
 
-    def get_message(self, listener, channel):
-        message_queue = self.channels.get(channel, {}).get(listener, None)
+    def get_message(self, listener, topic):
+        message_queue = self.topics.get(topic, {}).get(listener, None)
         if message_queue is None:
             return None
         try:
@@ -118,7 +118,7 @@ class PubSubBase:
                     enable_auto_commit=False,
                     value_deserializer=lambda v: json.loads(v.decode('utf-8'))
                 )
-                topic_partition = TopicPartition(channel, 0)
+                topic_partition = TopicPartition(topic, 0)
                 messages = consumer.poll(timeout_ms=100)
                 if not messages or messages == {}:
                     return None
@@ -130,25 +130,25 @@ class PubSubBase:
             else:
                 return message_queue.get_nowait()
         except Exception as e:
-            logger.error("Consumer error", e)
+            # logger.error("Consumer error", e)
             return None
 
 
 class PubSub(PubSubBase):
     def __init__(self, use_kafka):
-        super().__init__(use_kafka)
+        super().__init__(use_kafka, 100, 2 ** 30)
 
-    def subscribe(self, listener, channel):
-        return self.subscribe_(listener, channel, False)
+    def subscribe(self, listener, topic):
+        return self.subscribe_(listener, topic, False)
 
-    def publish(self, channel, message):
-        self.publish_(channel, message, False, priority=100)
+    def publish(self, topic, message):
+        self.publish_(topic, message, False, priority=100)
 
-    def unsubscribe(self, listener, channel_name):
-        super().unsubscribe(listener, channel_name)
+    def unsubscribe(self, listener, topic):
+        super().unsubscribe(listener, topic)
 
-    def listen(self, listener, channel_name):
-        return self.get_message(listener, channel_name)
+    def listen(self, listener, topic):
+        return self.get_message(listener, topic)
 
 
 def main():
@@ -156,35 +156,35 @@ def main():
     parser.add_argument('--useKafka', action='store_true', default=False, help='Flag to turn on Kafka message broker')
 
     args = parser.parse_args()
-
     # Access the flags
     use_kafka = args.useKafka
 
     # Create an instance of the PubSub class
-    communicator = PubSub(use_kafka)
+    broker = PubSub(use_kafka)
 
     # Define the functions to expose over JSON-RPC
-    def rpc_publish(channel_name, message):
-        communicator.publish(channel_name, message)
+    def rpc_publish(topic, message):
+        broker.publish(topic, message)
 
-    def rpc_subscribe(listener, channel_name):
-        return communicator.subscribe(listener, channel_name)
+    def rpc_subscribe(listener, topic):
+        return broker.subscribe(listener, topic)
 
-    def rpc_listen(listener, channel_name):
-        return communicator.listen(listener, channel_name)
+    def rpc_listen(listener, topic):
+        return broker.listen(listener, topic)
 
-    def rpc_unsubscribe(listener, channel_name):
-        communicator.unsubscribe(listener, channel_name)
+    def rpc_unsubscribe(listener, topic):
+        broker.unsubscribe(listener, topic)
 
     # Set up the JSON-RPC server
-    server = SimpleJSONRPCServer(('localhost', 5000))
-    server.register_function(rpc_publish, 'publish')
+    server = SimpleJSONRPCServer(('localhost', BROKER_PORT))
     server.register_function(rpc_subscribe, 'subscribe')
-    server.register_function(rpc_listen, 'listen')
     server.register_function(rpc_unsubscribe, 'unsubscribe')
+    server.register_function(rpc_listen, 'listen')
+    server.register_function(rpc_publish, 'publish')
+    server.allow_reuse_address = True
 
     # Start the server
-    print("Broker started")
+    print(f"Broker started on port {BROKER_PORT}...")
     server.serve_forever()
 
 

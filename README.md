@@ -33,7 +33,7 @@ From directory of the project run the following:
 
 **API Testing:**
 1. Open Postman or any API testing platform.
-2. Create a POST request to `http://localhost:5500`.
+2. Create a POST request to `http://localhost:8020`.
 3. In the request body (form-data), include the following fields:
     - `sender` (any string value)
     - `channel_name` (bitcoin, ethereum, xrp, cardano or dogecoin)

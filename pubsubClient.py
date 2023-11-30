@@ -1,39 +1,37 @@
+import json
+import logging
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
+
 from jsonrpclib import Server
-import socket
-import threading
-import json
-import time
-import logging
 
 logger = logging.getLogger(__name__)
 
-
-HOST = "localhost"
-PORT = 8000  # default
+PORT = 8000
 data = {}
 listener_track = {}
 
+
 class Listener(threading.Thread):
-    def __init__(self, channel_name, listener_name):
+    def __init__(self, topic_name, listener_name):
         threading.Thread.__init__(self)
-        self.channel_name = channel_name
-        self.broker = Server('http://localhost:5000')
+        self.topic_name = topic_name
+        self.broker = Server('http://localhost:8010')
         self.thread_name = listener_name
-        self.message_queue = self.broker.subscribe(listener_name, channel_name)
+        self.message_queue = self.broker.subscribe(listener_name, topic_name)
         self._stop_event = threading.Event()
 
     def run(self):
-        print(f"{self.thread_name} Run start, listening to messages on channel {self.channel_name}")
+        print(f"{self.thread_name} Run start, listening to messages on topic {self.topic_name}")
         global data
         while not self._stop_event.is_set():
-            message = self.broker.listen(self.thread_name, self.channel_name)
+            message = self.broker.listen(self.thread_name, self.topic_name)
             if message:
                 if self.thread_name not in data:
                     data[self.thread_name] = {}
-                data[self.thread_name][self.channel_name] = message
-                # Process the message here
+                data[self.thread_name][self.topic_name] = message
             else:
                 # No message in queue, sleep for a short time to avoid busy waiting
                 time.sleep(0.5)
@@ -43,7 +41,7 @@ class Listener(threading.Thread):
         self._stop_event.set()
 
     def unsubscribe(self):
-        self.broker.unsubscribe(self.thread_name, self.channel_name)
+        self.broker.unsubscribe(self.thread_name, self.topic_name)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -58,11 +56,11 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == '/subscribe':
                 listener_name = query_params['listener'][0]
-                channel_name = query_params['channel'][0]
-                listener = Listener(channel_name, listener_name)
+                topic_name = query_params['topic'][0]
+                listener = Listener(topic_name, listener_name)
                 if listener_name not in listener_track:
                     listener_track[listener_name] = {}
-                listener_track[listener_name][channel_name] = listener
+                listener_track[listener_name][topic_name] = listener
                 listener.start()
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -71,9 +69,9 @@ class Handler(BaseHTTPRequestHandler):
 
             elif path == "/getData":
                 listener_name = query_params['listener'][0]
-                channel_name = query_params['channel'][0]
+                topic_name = query_params['topic'][0]
                 if data.get(listener_name):
-                    response_data = data.get(listener_name).get(channel_name, [])
+                    response_data = data.get(listener_name).get(topic_name, [])
                     json_string = json.dumps([response_data]) if response_data != [] else json.dumps(response_data)
                 else:
                     json_string = json.dumps([])
@@ -87,11 +85,11 @@ class Handler(BaseHTTPRequestHandler):
 
             elif path == "/unsubscribe":
                 listener_name = query_params['listener'][0]
-                channel_name = query_params['channel'][0]
-                if listener_name in listener_track and channel_name in listener_track[listener_name]:
-                    listener_track[listener_name][channel_name].stop()
-                    listener_track[listener_name][channel_name].join()
-                    listener_track[listener_name][channel_name].unsubscribe()
+                topic_name = query_params['topic'][0]
+                if listener_name in listener_track and topic_name in listener_track[listener_name]:
+                    listener_track[listener_name][topic_name].stop()
+                    listener_track[listener_name][topic_name].join()
+                    listener_track[listener_name][topic_name].unsubscribe()
 
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -99,12 +97,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
 
         except Exception as e:
-            # pass
-            logger.error("Caught an Exception", e)
+            logger.error("Caught an Exception: ", e)
+            pass
 
 
 if __name__ == '__main__':
-    # main()
     with HTTPServer(('', PORT), Handler) as server:
         print(f"HTTP Server Running on port {PORT}...")
         server.serve_forever()

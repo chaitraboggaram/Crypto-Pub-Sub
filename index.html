@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Updates</title>
+    <title>Crypto Price Tracker</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" type="text/css" href="index.css">
@@ -141,7 +141,7 @@
         axios.get(`http://localhost:8000/unsubscribe`, {
             params: {
                 listener: listener_id,
-                channel: crypto
+                topic: crypto
             }
         }).then(() => {
             if (crypto === "bitcoin") {
@@ -174,7 +174,7 @@
         axios.get(`http://localhost:8000/subscribe`, {
             params: {
                 listener: listener_id,
-                channel: crypto
+                topic: crypto
             }
         }).then(() => {
             if (crypto === "bitcoin") {
@@ -197,7 +197,7 @@
         axios.get(`http://localhost:8000/getData`, {
             params: {
                 listener: listener_id,
-                channel: crypto
+                topic: crypto
             }
         }).then(response => {
             const updatesElement = document.getElementById(elementId);
